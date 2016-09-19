@@ -1,4 +1,4 @@
-﻿//Owen.Orm - A very simple ORM in C#
+//Owen.Orm - A very simple ORM in C#
 //
 //MIT License
 //Copyright (c) 2016 Owen P. Amador
@@ -127,6 +127,35 @@ namespace Owen.Orm
                 }
             }
         }
+
+        public int ExecuteNonQuery(string sqlCommand)
+        {
+            using (var connection = new TDbConnection())
+            {
+                connection.ConnectionString = ConnectionString;
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = sqlCommand;
+                    connection.Open();
+                    return command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public object ExecuteScalar(string sqlCommand)
+        {
+            using (var connection = new TDbConnection())
+            {
+                connection.ConnectionString = ConnectionString;
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = sqlCommand;
+                    connection.Open();
+                    return command.ExecuteScalar();
+                }
+            }
+        }
+
     }
 
     public class View<TDbConnection, TDomainObject> : Query<TDbConnection, TDomainObject> where TDbConnection : DbConnection, new() where TDomainObject : DomainObject, new()
