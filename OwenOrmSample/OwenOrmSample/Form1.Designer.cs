@@ -42,6 +42,9 @@
             this.deletebutton = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.personId = new System.Windows.Forms.Label();
+            this.refreshButton = new System.Windows.Forms.Button();
+            this.searchBox = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGrid)).BeginInit();
             this.SuspendLayout();
             // 
@@ -166,11 +169,41 @@
             this.personId.Size = new System.Drawing.Size(0, 13);
             this.personId.TabIndex = 13;
             // 
+            // refreshButton
+            // 
+            this.refreshButton.Location = new System.Drawing.Point(363, 145);
+            this.refreshButton.Name = "refreshButton";
+            this.refreshButton.Size = new System.Drawing.Size(75, 23);
+            this.refreshButton.TabIndex = 14;
+            this.refreshButton.Text = "Refresh";
+            this.refreshButton.UseVisualStyleBackColor = true;
+            this.refreshButton.Click += new System.EventHandler(this.refreshButton_Click);
+            // 
+            // searchBox
+            // 
+            this.searchBox.Location = new System.Drawing.Point(363, 9);
+            this.searchBox.Name = "searchBox";
+            this.searchBox.Size = new System.Drawing.Size(204, 20);
+            this.searchBox.TabIndex = 15;
+            this.searchBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.searchBox_KeyPress);
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(526, 32);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(41, 13);
+            this.label6.TabIndex = 16;
+            this.label6.Text = "Search";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(579, 396);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.searchBox);
+            this.Controls.Add(this.refreshButton);
             this.Controls.Add(this.personId);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.deletebutton);
@@ -209,6 +242,9 @@
         private System.Windows.Forms.Button deletebutton;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label personId;
+        private System.Windows.Forms.Button refreshButton;
+        private System.Windows.Forms.TextBox searchBox;
+        private System.Windows.Forms.Label label6;
     }
 }
 

@@ -12,14 +12,16 @@ namespace OwenOrmSample
 
         public Form1()
         {
-            prepareDatabaseFile();
-            InitializeComponent();
             personTable = new Table<SQLiteConnection, Person>(connectionString);
+            prepareDatabaseFile();
+            
+            InitializeComponent();
             refreshData();
         }
 
         private void refreshData()
         {
+            searchBox.Clear();
             dataGrid.DataSource = personTable.ToList(); //read all data from database
         }
 
@@ -68,13 +70,19 @@ namespace OwenOrmSample
 
         void prepareDatabaseFile()
         {
-            var q = new Query<SQLiteConnection, Blank>(connectionString, null);
-            //create the table in our database
-            q.ExecuteNonQuery(@"CREATE TABLE IF NOT EXISTS Person(PersonId INTEGER PRIMARY KEY AUTOINCREMENT, FirstName VARCHAR(20), MiddleName VARCHAR(20), LastName VARCHAR(20), Birthday  DATETIME);");
+            //let's create our table using this handy method ;)
+            personTable.ExecuteNonQuery(@"CREATE TABLE IF NOT EXISTS Person(PersonId INTEGER PRIMARY KEY AUTOINCREMENT, FirstName VARCHAR(20), MiddleName VARCHAR(20), LastName VARCHAR(20), Birthday  DATETIME);");
         }
 
-        //i just need this to execute a query
-        class Blank : DomainObject { }
+        private void refreshButton_Click(object sender, EventArgs e)
+        {
+            refreshData();
+        }
+
+        private void searchBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            dataGrid.DataSource = personTable.ToList("select {this} where firstname like {0} or lastname like {0} or middlename like {0}", "%" + searchBox.Text + "%");
+        }
     }
 
     public class Person : DomainObject
