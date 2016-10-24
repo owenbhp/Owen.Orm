@@ -50,8 +50,8 @@ namespace Owen.Orm
             public object Value;
         }
         private readonly string _sqlCommand;
-        protected readonly string _domainObjectName = typeof(TDomainObject).Name;
-        protected readonly PropertyInfo[] _domainObjectProperties = typeof(TDomainObject).GetProperties();
+        protected readonly string DomainObjectName = typeof(TDomainObject).Name;
+        protected readonly PropertyInfo[] DomainObjectProperties = typeof(TDomainObject).GetProperties();
         protected DomainObjectConverter ToDomainObject;
         public string ConnectionString { get; set; }
 
@@ -73,7 +73,6 @@ namespace Owen.Orm
 
         protected object Execute(bool isList, string sqlCommand, params SqlParameter[] sqlParameters)
         {
-            object dataToReturn;
             using (var connection = new TDbConnection())
             {
                 connection.ConnectionString = ConnectionString;
@@ -91,6 +90,7 @@ namespace Owen.Orm
                     {
                         connection.Open();
                         var dataReader = command.ExecuteReader();
+                        object dataToReturn;
                         if (isList)
                         {
                             var list = new List<TDomainObject>();
@@ -99,7 +99,7 @@ namespace Owen.Orm
                                 {
                                     int index = 0;
                                     var domainObject = new TDomainObject();
-                                    foreach (var property in _domainObjectProperties)
+                                    foreach (var property in DomainObjectProperties)
                                     {
                                         property.SetValue(domainObject, dataReader[index] == DBNull.Value ? null : Convert.ChangeType(dataReader[index], Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType), null);
                                         index++;
@@ -112,8 +112,7 @@ namespace Owen.Orm
                         }
                         else
                         {
-                            var dataTable = new DataTable();
-                            dataTable.TableName = _domainObjectName;
+                            var dataTable = new DataTable {TableName = DomainObjectName};
                             dataTable.Load(dataReader);
                             dataToReturn = dataTable;
                         }
@@ -160,17 +159,17 @@ namespace Owen.Orm
 
     public class View<TDbConnection, TDomainObject> : Query<TDbConnection, TDomainObject> where TDbConnection : DbConnection, new() where TDomainObject : DomainObject, new()
     {
-        protected readonly string _identifierCase;
-        protected readonly string _sqlFullyQualifiedTableName;
-        protected readonly string[] _sqlColumnAliases;
-        protected readonly string _sqlSelectCommand;
-        protected readonly string _sqlColumnNames;
+        protected readonly string IdentifierCase;
+        protected readonly string SqlFullyQualifiedTableName;
+        protected readonly string[] SqlColumnAliases;
+        protected readonly string SqlSelectCommand;
+        protected readonly string SqlColumnNames;
 
         public View(string connectionString) : base(connectionString, null)
         {
-            _sqlFullyQualifiedTableName = GetFullyQualifiedTableName(out _identifierCase);
-            _sqlColumnAliases = GetColumnAliases();
-            _sqlSelectCommand = CreateSelectCommandString(out _sqlColumnNames);
+            SqlFullyQualifiedTableName = GetFullyQualifiedTableName(out IdentifierCase);
+            SqlColumnAliases = GetColumnAliases();
+            SqlSelectCommand = CreateSelectCommandString(out SqlColumnNames);
         }
 
         public override DataTable ToDataTable()
@@ -199,37 +198,37 @@ namespace Owen.Orm
             {
                 if (customSelectSqlString != null)
                 {
-                    string commandText = customSelectSqlString.Replace("{this}", " " + _sqlColumnNames + " FROM " + _sqlFullyQualifiedTableName);
+                    string commandText = customSelectSqlString.Replace("{this}", " " + SqlColumnNames + " FROM " + SqlFullyQualifiedTableName);
                     int parametercount = sqlParameters.Length;
                     if (parametercount > 0)
                     {
                         for (int i = parametercount - 1; i >= 0; i--)
-                            commandText = commandText.Replace("{" + i + "}", "@" + _domainObjectName + "Parameter" + i);
+                            commandText = commandText.Replace("{" + i + "}", "@" + DomainObjectName + "Parameter" + i);
                         SqlParameter[] parameters = new SqlParameter[parametercount];
                         for (int i = 0; i < parametercount; i++)
-                            parameters[i] = new SqlParameter { Name = "@" + _domainObjectName + "Parameter" + i, Value = sqlParameters[i] };
+                            parameters[i] = new SqlParameter { Name = "@" + DomainObjectName + "Parameter" + i, Value = sqlParameters[i] };
                         return Execute(isList, commandText, parameters);
                     }
                     else
                         return Execute(isList, commandText);
                 }
                 else
-                    return Execute(isList, _sqlSelectCommand);
+                    return Execute(isList, SqlSelectCommand);
             }
             catch (Exception ex)
             {
-                throw new ApplicationException(string.Format("There was an error reading data from {0} View/Table. Make sure that the columns of the View/Table match the Domain Object's properties [name, type, order, number]", _domainObjectName), ex);
+                throw new ApplicationException(string.Format("There was an error reading data from {0} View/Table. Make sure that the columns of the View/Table match the Domain Object's properties [name, type, order, number]", DomainObjectName), ex);
             }
         }
 
         // HELPER METHODS
         protected string[] GetColumnAliases()
         {
-            string[] domainObjectPropertyNames = new string[_domainObjectProperties.Length];
-            for (int i = 0; i < _domainObjectProperties.Length; i++)
+            string[] domainObjectPropertyNames = new string[DomainObjectProperties.Length];
+            for (int i = 0; i < DomainObjectProperties.Length; i++)
             {
                 string column = null;
-                object[] attributes = _domainObjectProperties[i].GetCustomAttributes(false);
+                object[] attributes = DomainObjectProperties[i].GetCustomAttributes(false);
                 foreach (object attribute in attributes)
                 {
                     if (attribute is Sql) column = (attribute as Sql).Column;
@@ -251,25 +250,25 @@ namespace Owen.Orm
                 casetemp = (attribute as Sql).IdentifierCase;
             }
             identifierCase = casetemp;
-            return schema == null ? D(tablealias ?? _domainObjectName) : D(schema) + "." + D(tablealias ?? _domainObjectName);
+            return schema == null ? D(tablealias ?? DomainObjectName) : D(schema) + "." + D(tablealias ?? DomainObjectName);
         }
 
         protected string CreateSelectCommandString(out string sqlColumnNames)
         {
             string columns = "";
-            for (int i = 0; i < _sqlColumnAliases.Length; i++)
+            for (int i = 0; i < SqlColumnAliases.Length; i++)
             {
-                if (i == _sqlColumnAliases.Length - 1) columns += _sqlColumnAliases[i] == null ? D(_domainObjectProperties[i].Name) + " " : D(_sqlColumnAliases[i]) + " AS " + D(_domainObjectProperties[i].Name) + " ";
-                else columns += _sqlColumnAliases[i] == null ? D(_domainObjectProperties[i].Name) + ", " : D(_sqlColumnAliases[i]) + " AS " + D(_domainObjectProperties[i].Name) + ", ";
+                if (i == SqlColumnAliases.Length - 1) columns += SqlColumnAliases[i] == null ? D(DomainObjectProperties[i].Name) + " " : D(SqlColumnAliases[i]) + " AS " + D(DomainObjectProperties[i].Name) + " ";
+                else columns += SqlColumnAliases[i] == null ? D(DomainObjectProperties[i].Name) + ", " : D(SqlColumnAliases[i]) + " AS " + D(DomainObjectProperties[i].Name) + ", ";
             }
             sqlColumnNames = columns;
-            return "SELECT " + columns + " FROM " + _sqlFullyQualifiedTableName + ";";
+            return "SELECT " + columns + " FROM " + SqlFullyQualifiedTableName + ";";
         }
 
         protected string D(string identifier) //delimiter 
         {
             string idtemp = identifier;
-            switch ((_identifierCase ?? "").ToUpper())
+            switch ((IdentifierCase ?? "").ToUpper())
             {
                 case "UPPER":
                     idtemp = identifier.ToUpper();
@@ -292,13 +291,13 @@ namespace Owen.Orm
 
     public class Table<TDbConnection, TDomainObject> : View<TDbConnection, TDomainObject> where TDbConnection : DbConnection, new() where TDomainObject : DomainObject, new()
     {
-        protected readonly string _sqlInsertCommand;
-        protected readonly string _sqlUpdateCommand;
+        protected readonly string SqlInsertCommand;
+        protected readonly string SqlUpdateCommand;
 
         public Table(string connectionString) : base(connectionString)
         {
-            _sqlInsertCommand = CreateInsertCommandString();
-            _sqlUpdateCommand = CreateUpdateCommandString();
+            SqlInsertCommand = CreateInsertCommandString();
+            SqlUpdateCommand = CreateUpdateCommandString();
         }
 
         public int Insert(TDomainObject domainObject)
@@ -308,7 +307,7 @@ namespace Owen.Orm
                 connection.ConnectionString = ConnectionString;
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = _sqlInsertCommand;
+                    command.CommandText = SqlInsertCommand;
                     PrepareParameters(command, domainObject);
                     try
                     {
@@ -329,7 +328,7 @@ namespace Owen.Orm
                     }
                     catch (DbException ex)
                     {
-                        throw new ApplicationException(string.Format("There was an error inserting data into the {0} Table. Make sure that the columns of the Table match the Domain Object's properties [name, type, order, number]", _domainObjectName), ex);
+                        throw new ApplicationException(string.Format("There was an error inserting data into the {0} Table. Make sure that the columns of the Table match the Domain Object's properties [name, type, order, number]", DomainObjectName), ex);
                     }
                 }
             }
@@ -342,7 +341,7 @@ namespace Owen.Orm
                 connection.ConnectionString = ConnectionString;
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = _sqlUpdateCommand;
+                    command.CommandText = SqlUpdateCommand;
                     PrepareParameters(command, domainObject);
                     try
                     {
@@ -351,7 +350,7 @@ namespace Owen.Orm
                     }
                     catch (DbException ex)
                     {
-                        throw new ApplicationException(string.Format("There was an error updating {0} Table. Make sure that the columns of the Table match the Domain Object's properties [name, type, order, number]", _domainObjectName), ex);
+                        throw new ApplicationException(string.Format("There was an error updating {0} Table. Make sure that the columns of the Table match the Domain Object's properties [name, type, order, number]", DomainObjectName), ex);
                     }
                 }
             }
@@ -359,7 +358,7 @@ namespace Owen.Orm
 
         public int Delete(TDomainObject domainObject)
         {
-            int id = (int)_domainObjectProperties[0].GetValue(domainObject, null); //Get the value of the first property of domain object which is the id column
+            int id = (int)DomainObjectProperties[0].GetValue(domainObject, null); //Get the value of the first property of domain object which is the id column
             return Delete(id);
         }
 
@@ -370,7 +369,7 @@ namespace Owen.Orm
                 connection.ConnectionString = ConnectionString;
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2};", _sqlFullyQualifiedTableName, D(_sqlColumnAliases[0] ?? _domainObjectProperties[0].Name), id);
+                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2};", SqlFullyQualifiedTableName, D(SqlColumnAliases[0] ?? DomainObjectProperties[0].Name), id);
                     try
                     {
                         connection.Open();
@@ -378,7 +377,7 @@ namespace Owen.Orm
                     }
                     catch (DbException ex)
                     {
-                        throw new ApplicationException(string.Format("There was an error deleting the record with Id number: {0} from {1} Table. Make sure that the columns of the Table match the Domain Object's properties [name, type, order, number]", id, _domainObjectName), ex);
+                        throw new ApplicationException(string.Format("There was an error deleting the record with Id number: {0} from {1} Table. Make sure that the columns of the Table match the Domain Object's properties [name, type, order, number]", id, DomainObjectName), ex);
                     }
                 }
             }
@@ -387,23 +386,23 @@ namespace Owen.Orm
         // HELPER METHODS
         protected string CreateInsertCommandString() // identity comlumn will not be included 
         {
-            string intoPart = "INSERT INTO " + _sqlFullyQualifiedTableName + " (";
+            string intoPart = "INSERT INTO " + SqlFullyQualifiedTableName + " (";
             string valuesPart = " VALUES (";
-            for (int i = 0; i < _sqlColumnAliases.Length; i++)
+            for (int i = 0; i < SqlColumnAliases.Length; i++)
             {
                 if (i == 0) continue;
-                if (i == _sqlColumnAliases.Length - 1)
+                if (i == SqlColumnAliases.Length - 1)
                 {
-                    intoPart += D(_sqlColumnAliases[i] ?? _domainObjectProperties[i].Name) + ") ";
-                    valuesPart += "@" + _domainObjectName + _domainObjectProperties[i].Name + ") ";
+                    intoPart += D(SqlColumnAliases[i] ?? DomainObjectProperties[i].Name) + ") ";
+                    valuesPart += "@" + DomainObjectName + DomainObjectProperties[i].Name + ") ";
                 }
                 else
                 {
-                    intoPart += D(_sqlColumnAliases[i] ?? _domainObjectProperties[i].Name) + ", ";
-                    valuesPart += "@" + _domainObjectName + _domainObjectProperties[i].Name + ", ";
+                    intoPart += D(SqlColumnAliases[i] ?? DomainObjectProperties[i].Name) + ", ";
+                    valuesPart += "@" + DomainObjectName + DomainObjectProperties[i].Name + ", ";
                 }
             }
-            string primaryKey = _sqlColumnAliases[0] ?? _domainObjectProperties[0].Name;
+            string primaryKey = SqlColumnAliases[0] ?? DomainObjectProperties[0].Name;
             switch (typeof(TDbConnection).Name)
             {
                 case "SqlConnection":
@@ -421,23 +420,23 @@ namespace Owen.Orm
 
         protected string CreateUpdateCommandString()
         {
-            string updateCommand = "UPDATE " + _sqlFullyQualifiedTableName + " SET ";
-            for (int i = 0; i < _sqlColumnAliases.Length; i++)
+            string updateCommand = "UPDATE " + SqlFullyQualifiedTableName + " SET ";
+            for (int i = 0; i < SqlColumnAliases.Length; i++)
             {
                 if (i == 0) continue;
-                if (i == _sqlColumnAliases.Length - 1) updateCommand += D(_sqlColumnAliases[i] ?? _domainObjectProperties[i].Name) + " = @" + _domainObjectName + _domainObjectProperties[i].Name + " ";
-                else updateCommand += D(_sqlColumnAliases[i] ?? _domainObjectProperties[i].Name) + " = @" + _domainObjectName + _domainObjectProperties[i].Name + ", ";
+                if (i == SqlColumnAliases.Length - 1) updateCommand += D(SqlColumnAliases[i] ?? DomainObjectProperties[i].Name) + " = @" + DomainObjectName + DomainObjectProperties[i].Name + " ";
+                else updateCommand += D(SqlColumnAliases[i] ?? DomainObjectProperties[i].Name) + " = @" + DomainObjectName + DomainObjectProperties[i].Name + ", ";
             }
-            updateCommand += " WHERE " + D(_sqlColumnAliases[0] ?? _domainObjectProperties[0].Name) + " = @" + _domainObjectName + _domainObjectProperties[0].Name + ";";  //idColumn
+            updateCommand += " WHERE " + D(SqlColumnAliases[0] ?? DomainObjectProperties[0].Name) + " = @" + DomainObjectName + DomainObjectProperties[0].Name + ";";  //idColumn
             return updateCommand;
         }
 
         protected void PrepareParameters(DbCommand command, DomainObject domainObject)
         {
-            foreach (PropertyInfo property in _domainObjectProperties)
+            foreach (PropertyInfo property in DomainObjectProperties)
             {
                 DbParameter parameter = command.CreateParameter();
-                parameter.ParameterName = "@" + _domainObjectName + property.Name;
+                parameter.ParameterName = "@" + DomainObjectName + property.Name;
                 parameter.Value = property.GetValue(domainObject, null) ?? DBNull.Value;
                 command.Parameters.Add(parameter);
             }
